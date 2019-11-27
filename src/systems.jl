@@ -1,5 +1,5 @@
 
 
-system_headers(jl::Julia, tgt::Target{A, v, :linux, :gnu}, dist::Distro, lib::Library) where {A, v} = "/usr/include"
-system_libraries(jl::Julia, tgt::Target{A, v, :linux, :gnu}, dist::Distro, lib::Library) where {A, v} = "/usr/lib"
+system_headers(tgt::Target{A, v, :linux, :gnu}, dist::Distro) where {A, v} = "/usr/include"
+system_libraries(tgt::Target{A, v, :linux, :gnu}, dist::Distro) where {A, v} = "/usr/lib"
 

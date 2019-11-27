@@ -3,7 +3,11 @@ module SystemBindings
 	
 	
 	export Julia, Target, Distro, Library, Customization, Binding
-	export major, minor, patch, arch, vendor, system, abi, name, version, generate
+	export major, minor, patch
+	export arch, vendor, system, abi
+	export name, version
+	export julia, target, distro, library, custom
+	export system_headers, system_libraries
 	export @sys
 	
 	
@@ -74,9 +78,10 @@ module SystemBindings
 		dist::Distro
 		lib::Library
 		cust::Customization
-		deps::Vector{Library}
-		atdev::String
-		conv::CBindingGen.ConverterContext
+		
+		depends::Function
+		atdevel::Function
+		context::Function
 	end
 	Binding(jl::Julia, tgt::Target, dist::Distro, lib::Library, cust::Customization = Customization(jl, tgt, dist, lib)) = error("System binding is not specified, please implement a `SystemBindings.Binding(::Julia{$(repr(major(jl))), $(repr(minor(jl))), $(repr(patch(jl)))}, ::Target{$(repr(arch(tgt))), $(repr(vendor(tgt))), $(repr(system(tgt))), $(repr(abi(tgt)))}, ::Distro{$(repr(name(dist))), $(repr(version(dist)))}, ::Library{$(repr(name(dist))), $(repr(version(dist)))}, ::Customization{$(repr(name(cust)))}) = ...` method")
 	Binding(lib::Library) = Binding(Julia(), Target(), Distro(), lib)
@@ -86,36 +91,40 @@ module SystemBindings
 	distro(b::Binding) = b.dist
 	library(b::Binding) = b.lib
 	custom(b::Binding) = b.cust
+	depends(b::Binding) = b.depends(b)
+	atdevel(b::Binding) = b.atdevel(b)
+	context(b::Binding) = b.context(b)
 	
 	Base.dirname(b::Binding) = joinpath(dirname(julia(b)), dirname(target(b)), dirname(distro(b)), dirname(library(b)), dirname(custom(b)))
+	
+	system_headers(b::Binding) = system_headers(target(b), distro(b))
+	system_libraries(b::Binding) = system_libraries(target(b), distro(b))
 	
 	gendir() = joinpath(Base.DEPOT_PATH[1], "bindings")
 	clean() = rm(gendir(), force = true, recursive = true)
 	
+	# TODO: this should clean up bindings that depended on it too
 	function clean(b::Binding; clean_deps::Bool = false)
-		if clean_deps
-			for dep in b.deps
-				clean(Binding(julia(b), target(b), distro(b), dep, Customization(julia(b), target(b), distro(b), dep)), clean_deps = true)
-			end
-		end
 		rm(joinpath(gendir(), dirname(b)), force = true, recursive = true)
+		clean_deps && foreach(dep -> clean(dep, clean_deps = true), depends(b))
 	end
 	
 	function generate(b::Binding)
-		for dep in b.deps
-			generate(Binding(julia(b), target(b), distro(b), dep, Customization(julia(b), target(b), distro(b), dep)))
-		end
+		foreach(generate, b.depends(b))
 		basedir = joinpath(gendir(), dirname(b))
-		CBindingGen.generate(b.conv, basedir)
+		atdev = relpath(atdevel(b), basedir)
+		CBindingGen.generate(context(b), basedir)
 		open(joinpath(basedir, "$(name(library(b))).jl"), "w") do file
 			write(file, """
 			module $(name(library(b)))
 				import CBinding
 				
-				include(joinpath(Base.DEPOT_PATH[1], "$(relpath(b.atdev, Base.DEPOT_PATH[1]))"))
-				include(joinpath(Base.DEPOT_PATH[1], "$(relpath(joinpath(basedir, "atcompile.jl"), Base.DEPOT_PATH[1]))"))
+				if isfile($(repr(atdev)))
+					include($(repr(atdev)))
+				end
+				include("atcompile.jl")
 				function __init__()
-					include(joinpath(Base.DEPOT_PATH[1], "$(relpath(joinpath(basedir, "atload.jl"), Base.DEPOT_PATH[1]))"))
+					include("atload.jl")
 				end
 			end
 			""")
