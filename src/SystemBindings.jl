@@ -134,8 +134,8 @@ module SystemBindings
 		end
 	end
 	
-	function load(b::Binding; mod::Module = Main.Bindings)
-		@eval(Main, $(QuoteNode(name(library(b)))) in names($(mod), all=true)) || @eval(Main, Base.include($(mod), $(generated_file(b))))
+	function load(b::Binding; mod::Module = (@__MODULE__).Libraries)
+		@eval(Main, $(QuoteNode(name(library(b)))) in names($(mod), all=true)) || ((@info "loading") ; @eval(Main, Base.include($(mod), $(generated_file(b)))))
 		return @eval(Main, getproperty($(mod), $(QuoteNode(name(library(b))))))
 	end
 	
@@ -151,7 +151,7 @@ module SystemBindings
 			name = name.args[1]
 		end
 		Base.is_expr(name, :., 1) || error("Expected a library name in @sys using/import statement, but found `$(name)`")
-		pushfirst!(name.args, :Main, :Bindings)
+		pushfirst!(name.args, :SystemBindings, :Libraries)
 		
 		b = Binding(Library(last(name.args)))
 		isfile(generated_file(b)) || generate(b)
@@ -167,6 +167,9 @@ module SystemBindings
 	include("distros.jl")
 	include("systems.jl")
 	
+	baremodule Libraries
+	end
+	
 	module Bindings
 		for entry in readdir(@__DIR__)
 			lib = joinpath(@__DIR__, entry, "bindings.jl")
@@ -178,10 +181,5 @@ module SystemBindings
 				include($(lib))
 			end
 		end
-	end
-	
-	
-	function __init__()
-		@eval(Main, baremodule Bindings end)
 	end
 end
