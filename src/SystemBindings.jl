@@ -101,40 +101,42 @@ module SystemBindings
 	system_headers(b::Binding) = system_headers(target(b), distro(b))
 	system_libraries(b::Binding) = system_libraries(target(b), distro(b))
 	
-	gendir() = joinpath(Base.DEPOT_PATH[1], "bindings")
-	clean() = rm(gendir(), force = true, recursive = true)
+	generated_file(b::Binding) = joinpath(bindings_dir(b), "$(name(library(b))).jl")
+	bindings_dir(b::Binding) = joinpath(bindings_dir(), dirname(b))
+	bindings_dir() = joinpath(Base.DEPOT_PATH[1], "bindings")
+	clean() = rm(bindings_dir(), force = true, recursive = true)
 	
 	# TODO: this should clean up bindings that depended on it too
 	function clean(b::Binding; clean_deps::Bool = false)
-		rm(joinpath(gendir(), dirname(b)), force = true, recursive = true)
+		rm(bindings_dir(b), force = true, recursive = true)
 		clean_deps && foreach(dep -> clean(dep, clean_deps = true), depends(b))
 	end
 	
 	function generate(b::Binding)
-		foreach(generate, b.depends(b))
-		basedir = joinpath(gendir(), dirname(b))
-		atdev = relpath(atdevel(b), basedir)
-		CBindingGen.generate(context(b), basedir)
-		open(joinpath(basedir, "$(name(library(b))).jl"), "w") do file
+		foreach(generate, depends(b))
+		atdev = relpath(atdevel(b), bindings_dir(b))
+		CBindingGen.generate(context(b), bindings_dir(b))
+		open(generated_file(b), "w") do file
 			write(file, """
-			module $(name(library(b)))
+			baremodule $(name(library(b)))
 				import CBinding
+				import CBinding.Base
 				
-				if isfile(joinpath(@__DIR__, $(repr(atdev))))
-					include(joinpath(@__DIR__, $(repr(atdev))))
+				if CBinding.Base.isfile(CBinding.Base.joinpath(CBinding.Base.@__DIR__, $(repr(atdev))))
+					CBinding.Base.include(CBinding.Base.@__MODULE__, CBinding.Base.joinpath(CBinding.Base.@__DIR__, $(repr(atdev))))
 				end
-				include(joinpath(@__DIR__, "atcompile.jl"))
+				CBinding.Base.include(CBinding.Base.@__MODULE__, CBinding.Base.joinpath(CBinding.Base.@__DIR__, "atcompile.jl"))
 				function __init__()
-					include(joinpath(@__DIR__, "atload.jl"))
+					CBinding.Base.include(CBinding.Base.@__MODULE__, CBinding.Base.joinpath(CBinding.Base.@__DIR__, "atload.jl"))
 				end
 			end
 			""")
 		end
 	end
 	
-	function load(b::Binding)
-		basedir = joinpath(gendir(), dirname(b))
-		return @eval include($(joinpath(basedir, "$(name(library(b))).jl")))
+	function load(b::Binding; mod::Module = Main.Bindings)
+		@eval(Main, $(QuoteNode(name(library(b)))) in names($(mod), all=true)) || @eval(Main, Base.include($(mod), $(generated_file(b))))
+		return @eval(Main, getproperty($(mod), $(QuoteNode(name(library(b))))))
 	end
 	
 	
@@ -154,5 +156,10 @@ module SystemBindings
 				include($(lib))
 			end
 		end
+	end
+	
+	
+	function __init__()
+		@eval(Main, baremodule Bindings end)
 	end
 end
