@@ -53,6 +53,7 @@ module SystemBindings
 	struct Library{name, version}
 	end
 	Library(name::Symbol) = Library{name}(Julia(), Target(), Distro())
+	Library(name::Symbol, version::Symbol) = Library{name, version}(Julia(), Target(), Distro())
 	Library{name}(jl::Julia, tgt::Target, dist::Distro) where {name} = error("Unsupported library or version, please implement a `SystemBindings.Library{$(name)}(::Julia{$(repr(major(jl))), $(repr(minor(jl))), $(repr(patch(jl)))}, ::Target{$(repr(arch(tgt))), $(repr(vendor(tgt))), $(repr(system(tgt))), $(repr(abi(tgt)))}, ::Distro{$(repr(name(dist))), $(repr(version(dist)))}) = ...` method")
 	
 	name(::Library{n, v}) where {n, v} = n
@@ -119,16 +120,21 @@ module SystemBindings
 			module $(name(library(b)))
 				import CBinding
 				
-				if isfile($(repr(atdev)))
-					include($(repr(atdev)))
+				if isfile(joinpath(@__DIR__, $(repr(atdev))))
+					include(joinpath(@__DIR__, $(repr(atdev))))
 				end
-				include("atcompile.jl")
+				include(joinpath(@__DIR__, "atcompile.jl"))
 				function __init__()
-					include("atload.jl")
+					include(joinpath(@__DIR__, "atload.jl"))
 				end
 			end
 			""")
 		end
+	end
+	
+	function load(b::Binding)
+		basedir = joinpath(gendir(), dirname(b))
+		return @eval include($(joinpath(basedir, "$(name(library(b))).jl")))
 	end
 	
 	
