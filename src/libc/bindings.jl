@@ -72,10 +72,10 @@ let
 			header = filename(decl)
 			name   = spelling(decl)
 			
-			# decl isa CLFunctionDecl && name in (
-			# 	"alloca",
-			# 	"atexit",
-			# ) && return false
+			decl isa CLFunctionDecl && name in (
+				"alloca",
+				"atexit",
+			) && return false
 			
 			startswith(name, "__") && (decl isa CLFunctionDecl || decl isa CLVarDecl || decl isa CLMacroDefinition) && return false
 			
