@@ -140,6 +140,28 @@ module SystemBindings
 	end
 	
 	
+	macro sys(exprs...) ; return _sys(__module__, exprs...) ; end
+	
+	# TODO: provide more _sys functions to handle versions/version ranges/etc as well as customizations
+	function _sys(mod::Module, expr::Expr)
+		Base.is_expr(expr, :using, 1) || Base.is_expr(expr, :import, 1) || error("Expected to find a `using ...` or `import ...` statement in @sys usage")
+		
+		name = expr.args[1]
+		if Base.is_expr(name, :(:)) && length(name.args) >= 1
+			name = name.args[1]
+		end
+		Base.is_expr(name, :., 1) || error("Expected a library name in @sys using/import statement, but found `$(name)`")
+		pushfirst!(name.args, :Main, :Bindings)
+		
+		b = Binding(Library(last(name.args)))
+		isfile(generated_file(b)) || generate(b)
+		
+		return quote
+			SystemBindings.load($(b))
+			$(expr)
+		end
+	end
+	
 	
 	include("targets.jl")
 	include("distros.jl")
