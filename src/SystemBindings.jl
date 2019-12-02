@@ -65,7 +65,7 @@ module SystemBindings
 	Binding(tgt::Target, dist::Distro, lib::Library) = error("System binding is not specified, please implement a `SystemBindings.Binding(::Target{$(repr(arch(tgt))), $(repr(vendor(tgt))), $(repr(system(tgt))), $(repr(abi(tgt)))}, ::Distro{$(repr(name(dist))), $(repr(version(dist)))}, ::Library{$(repr(name(dist))), $(repr(version(dist)))}) = ...` method")
 	
 	library(b::Binding{l}) where {l} = l()
-	context(b::Binding) = b.context(b)
+	context(b::Binding) = b.context()
 	depends(b::Binding) = b.depends
 	atcompile(b::Binding) = b.atcompile
 	atload(b::Binding) = b.atload
