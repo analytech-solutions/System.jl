@@ -44,13 +44,13 @@ module SystemBindings
 	end
 	Library(name::Symbol) = Library{name}(Target(), Distro())
 	Library(name::Symbol, version::Symbol) = Library{name, version}(Target(), Distro())
-	Library{name}(tgt::Target, dist::Distro) where {name} = error("Unsupported library, please implement a `SystemBindings.Library{$(name)}(::Target{$(repr(arch(tgt))), $(repr(vendor(tgt))), $(repr(system(tgt))), $(repr(abi(tgt)))}, ::Distro{$(repr(name(dist))), $(repr(version(dist)))}) = ...` method")
-	Library{name, version}(tgt::Target, dist::Distro) where {name, version} = error("Unsupported library or version, please implement a `SystemBindings.Library{$(name), $(version)}(::Target{$(repr(arch(tgt))), $(repr(vendor(tgt))), $(repr(system(tgt))), $(repr(abi(tgt)))}, ::Distro{$(repr(name(dist))), $(repr(version(dist)))}) = ...` method")
+	Library{n}(tgt::Target, dist::Distro) where {n} = error("Unsupported library, please implement a `SystemBindings.Library{$(n)}(::Target{$(repr(arch(tgt))), $(repr(vendor(tgt))), $(repr(system(tgt))), $(repr(abi(tgt)))}, ::Distro{$(repr(name(dist))), $(repr(version(dist)))}) = ...` method")
+	Library{n, v}(tgt::Target, dist::Distro) where {n, v} = error("Unsupported library or version, please implement a `SystemBindings.Library{$(n), $(v)}(::Target{$(repr(arch(tgt))), $(repr(vendor(tgt))), $(repr(system(tgt))), $(repr(abi(tgt)))}, ::Distro{$(repr(name(dist))), $(repr(version(dist)))}) = ...` method")
 	
 	name(::Library{n, v}) where {n, v} = n
 	version(::Library{n, v}) where {n, v} = v
 	
-	Base.dirname(lib::Library) = "$(name(lib))_$(version(lib))"
+	Base.dirname(lib::Library) = replace("$(name(lib))-$(version(lib))", r"\W" => "_")
 	
 	
 	struct Binding{lib<:Library}
