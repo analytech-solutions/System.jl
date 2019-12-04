@@ -10,6 +10,10 @@ module SystemBindings
 	export @sys
 	
 	
+	# in auto-generated bindings, macros can be used to avoid naming conflicts between Julia and C, so `@SystemBindings().include(...)` will not conflict with `include(...)`
+	macro SystemBindings() return @__MODULE__ end
+	
+	
 	# target triple: https://clang.llvm.org/docs/CrossCompilation.html#target-triple
 	struct Target{arch, vendor, system, abi}
 	end
@@ -83,25 +87,23 @@ module SystemBindings
 	function generate(b::Binding)
 		foreach(generate, depends(b))
 		
-		src = joinpath(bindings_dir(b), "src")
-		CBindingGen.generate(context(b), src)
-		open(joinpath(src, dirname(library(b))*".jl"), "w") do file
-			compile = isnothing(atcompile(b)) ? "" : "CBinding.Base.include(CBinding.Base.@__MODULE__, CBinding.Base.joinpath(CBinding.Base.dirname(CBinding.Base.pathof(SystemBindings)), $(repr(relpath(atcompile(b), dirname(pathof(SystemBindings)))))))"
-			load = isnothing(atload(b)) ? "" : "CBinding.Base.include(CBinding.Base.@__MODULE__, CBinding.Base.joinpath(CBinding.Base.dirname(CBinding.Base.pathof(SystemBindings)), $(repr(relpath(atload(b), dirname(pathof(SystemBindings)))))))"
+		CBindingGen.generate(context(b), joinpath(bindings_dir(b), "src"))
+		open(joinpath(bindings_dir(b), "src", dirname(library(b))*".jl"), "w") do file
+			compile = isnothing(atcompile(b)) ? "" : "@SystemBindings().Base.include(@SystemBindings().@__MODULE__, @SystemBindings().joinpath(@SystemBindings().dirname(@SystemBindings().pathof(@SystemBindings())), $(repr(relpath(atcompile(b), dirname(pathof(SystemBindings)))))))"
+			load = isnothing(atload(b)) ? "" : "@SystemBindings().Base.include(@SystemBindings().@__MODULE__, @SystemBindings().joinpath(@SystemBindings().dirname(@SystemBindings().pathof(@SystemBindings())), $(repr(relpath(atload(b), dirname(pathof(SystemBindings)))))))"
 			
 			write(file, """
 			baremodule $(dirname(library(b)))
 				const $(name(library(b))) = $(dirname(library(b)))
 				
-				import CBinding
-				import CBinding.Base
-				import SystemBindings
+				using CBinding: @CBinding, @ctypedef, @cstruct, @cunion, @carray, @calign, @cenum, @cextern, @cbindings
+				using SystemBindings: @SystemBindings, @sys
 				
 				$(compile)
-				CBinding.Base.include(CBinding.Base.@__MODULE__, CBinding.Base.joinpath(CBinding.Base.@__DIR__, "atcompile.jl"))
+				@SystemBindings().Base.include(@SystemBindings().@__MODULE__, @SystemBindings().joinpath(@SystemBindings().@__DIR__, "atcompile.jl"))
 				function __init__()
 					$(load)
-					CBinding.Base.include(CBinding.Base.@__MODULE__, CBinding.Base.joinpath(CBinding.Base.@__DIR__, "atload.jl"))
+					@SystemBindings().Base.include(@SystemBindings().@__MODULE__, @SystemBindings().joinpath(@SystemBindings().@__DIR__, "atload.jl"))
 				end
 			end
 			""")
