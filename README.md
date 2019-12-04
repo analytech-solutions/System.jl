@@ -30,6 +30,6 @@ hi
 ```
 
 If you encounter a library that is not yet in the SystemBindings.jl repertoire of recipes, please create an issue and identify what OS and system library is required.
-For customizing recipes to your secure computing environments, please consider consulting with @analytech-solutions directly for support.
+For customizing recipes to your secure computing environments, please consider consulting with [Analytech Solutions](mailto:team@analytech-solutions.com) directly for support.
 
 More documentation on creating recipes will be published as the package matures.
