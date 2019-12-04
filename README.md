@@ -4,13 +4,13 @@ This package provides a framework for detecting and utilizing system libraries f
 
 # Usage
 
-A major goal with SystemBindings.jl is to provide a framework that enables a simple, Julian way of bringing system C libraries into your Julia package.
+A goal of SystemBindings.jl is to provide a framework that enables a simple, Julian way of bringing system C libraries into your Julia package.
 The framework provides utilities for detecting system resources and it includes recipes for creating bindings to resources already on your system.
 Another portion of the framework creates a local pseudo-package repository for the generated bindings to be used from your own packages.
 
 As a user who merely wishes to use a system library from Julia, the details of how SystemBindings.jl works are not important.
 All you need to know is how to get access to the library without investing much effort.
-Therefore, we provide a simple mechanism for using C libraries on your system.
+Therefore, we provide a simple mechanism for using C libraries found on your system, the `@sys` macro.
 
 ```jl
 julia> using SystemBindings
