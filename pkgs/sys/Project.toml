@@ -1,0 +1,7 @@
+name = "sys"
+uuid = "7022cf9a-419e-427c-a992-ed81cd5f5d41"
+authors = ["Keith Rutkowski <keith@analytech-solutions.com>"]
+version = "0.1.0"
+
+[deps]
+System = "75a07032-1394-4a60-8011-bf81691479e2"
